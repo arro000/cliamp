@@ -218,7 +218,9 @@ func (e EmbyConfig) IsSet() bool {
 
 // Config holds user preferences loaded from the config file.
 type Config struct {
-	Volume           float64     // dB, range [-30, +6]
+	Volume            float64     // dB, range [VolumeMin, +6]
+	VolumeMin         float64     // dB floor, range [-90, 0]; default -50
+	VisVolumeLinked   bool        // when true, visualizer bar height follows volume; default true
 	EQ               [10]float64 // per-band gain in dB, range [-12, +12]
 	EQPreset         string      // preset name, or "" for custom
 	Repeat           string      // "off", "all", or "one"
@@ -258,7 +260,9 @@ type Config struct {
 // that require a specific rate (commonly 48 kHz) work out of the box.
 func defaultConfig() Config {
 	return Config{
-		Repeat:          "off",
+		VolumeMin:         -50,
+		VisVolumeLinked:   true,
+		Repeat:            "off",
 		AutoPlay:        false,
 		Speed:           1.0,
 		SeekStepLarge:   30,
@@ -444,6 +448,12 @@ func Load() (Config, error) {
 				if v, err := strconv.ParseFloat(val, 64); err == nil {
 					cfg.Volume = v
 				}
+			case "volume_min":
+				if v, err := strconv.ParseFloat(val, 64); err == nil {
+					cfg.VolumeMin = v
+				}
+			case "vis_volume_linked":
+				cfg.VisVolumeLinked = val == "true"
 			case "repeat":
 				val = parseString(val)
 				switch strings.ToLower(val) {
@@ -656,6 +666,7 @@ func SaveNavidromeSort(sortType string) error {
 
 // PlayerConfig is the subset of player controls needed to apply config.
 type PlayerConfig interface {
+	SetVolumeMin(db float64)
 	SetVolume(db float64)
 	SetSpeed(ratio float64)
 	SetEQBand(band int, dB float64)
@@ -670,6 +681,7 @@ type PlaylistConfig interface {
 
 // ApplyPlayer applies audio-engine settings from the config.
 func (c Config) ApplyPlayer(p PlayerConfig) {
+	p.SetVolumeMin(c.VolumeMin)
 	p.SetVolume(c.Volume)
 	if c.Speed != 0 && c.Speed != 1.0 {
 		p.SetSpeed(c.Speed)
@@ -705,7 +717,8 @@ func (c Config) SeekStepLargeDuration() time.Duration {
 
 // clamp constrains all Config fields to their valid ranges.
 func (c *Config) clamp() {
-	c.Volume = max(min(c.Volume, 6), -30)
+	c.VolumeMin = max(min(c.VolumeMin, 0), -90)
+	c.Volume = max(min(c.Volume, 6), c.VolumeMin)
 	if c.Speed < 0.25 || c.Speed > 2.0 {
 		c.Speed = 1.0
 	}

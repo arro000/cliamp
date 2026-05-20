@@ -59,12 +59,36 @@ func TestSetVolumeMinClamps(t *testing.T) {
 	}
 }
 
-func TestVolumeClampedToCustomMin(t *testing.T) {
+func TestSetVolumeMinReconcilesCurrent(t *testing.T) {
 	p := newTestPlayer()
-	p.SetVolumeMin(-30)
-	p.SetVolume(-40) // below new min
+	p.SetVolume(-40)
+	p.SetVolumeMin(-30) // raise floor above current volume
 	if got := p.Volume(); got != -30 {
-		t.Errorf("Volume = %v, want -30 (clamped to VolumeMin)", got)
+		t.Errorf("Volume after SetVolumeMin raise = %v, want -30", got)
+	}
+}
+
+func TestVolumeClampedToCustomMin(t *testing.T) {
+	tests := []struct {
+		name      string
+		volumeMin float64
+		volume    float64
+		want      float64
+	}{
+		{"below floor", -30, -40, -30},
+		{"at floor", -30, -30, -30},
+		{"above floor", -30, -10, -10},
+		{"custom floor -60", -60, -70, -60},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newTestPlayer()
+			p.SetVolumeMin(tt.volumeMin)
+			p.SetVolume(tt.volume)
+			if got := p.Volume(); got != tt.want {
+				t.Errorf("Volume = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

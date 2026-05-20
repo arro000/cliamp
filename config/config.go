@@ -453,7 +453,9 @@ func Load() (Config, error) {
 					cfg.VolumeMin = v
 				}
 			case "vis_volume_linked":
-				cfg.VisVolumeLinked = val == "true"
+				if v, err := strconv.ParseBool(val); err == nil {
+					cfg.VisVolumeLinked = v
+				}
 			case "repeat":
 				val = parseString(val)
 				switch strings.ToLower(val) {

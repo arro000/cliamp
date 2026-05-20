@@ -566,8 +566,20 @@ func (p *Player) PositionAndDuration() (time.Duration, time.Duration) {
 }
 
 // SetVolumeMin sets the minimum volume floor in dB, clamped to [-90, 0].
+// If the current volume is below the new floor it is immediately raised to match.
 func (p *Player) SetVolumeMin(db float64) {
-	p.volMin.Store(math.Float64bits(max(min(db, 0), -90)))
+	newMin := max(min(db, 0), -90)
+	p.volMin.Store(math.Float64bits(newMin))
+	for {
+		cur := p.volume.Load()
+		curDB := math.Float64frombits(cur)
+		if curDB >= newMin {
+			break
+		}
+		if p.volume.CompareAndSwap(cur, math.Float64bits(newMin)) {
+			break
+		}
+	}
 }
 
 // VolumeMin returns the current minimum volume floor in dB.

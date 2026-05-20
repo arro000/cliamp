@@ -101,12 +101,27 @@ func TestClampVolumeMin(t *testing.T) {
 }
 
 func TestVolumeClampedToVolumeMin(t *testing.T) {
-	cfg := defaultConfig()
-	cfg.VolumeMin = -30
-	cfg.Volume = -40 // below VolumeMin
-	cfg.clamp()
-	if cfg.Volume != -30 {
-		t.Errorf("Volume = %f, want -30 (clamped to VolumeMin)", cfg.Volume)
+	tests := []struct {
+		name      string
+		volumeMin float64
+		volume    float64
+		want      float64
+	}{
+		{"below floor", -30, -40, -30},
+		{"at floor", -30, -30, -30},
+		{"above floor", -30, -10, -10},
+		{"custom floor -60", -60, -70, -60},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := defaultConfig()
+			cfg.VolumeMin = tt.volumeMin
+			cfg.Volume = tt.volume
+			cfg.clamp()
+			if cfg.Volume != tt.want {
+				t.Errorf("Volume = %f, want %f", cfg.Volume, tt.want)
+			}
+		})
 	}
 }
 
@@ -612,6 +627,7 @@ func (m *mockPlayer) ToggleMono()                    { m.mono = !m.mono }
 
 func TestApplyPlayer(t *testing.T) {
 	cfg := defaultConfig()
+	cfg.VolumeMin = -70
 	cfg.Volume = -10
 	cfg.Speed = 1.5
 	cfg.EQ = [10]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
@@ -621,6 +637,9 @@ func TestApplyPlayer(t *testing.T) {
 	p := &mockPlayer{}
 	cfg.ApplyPlayer(p)
 
+	if p.volumeMin != -70 {
+		t.Errorf("volumeMin = %f, want -70", p.volumeMin)
+	}
 	if p.volume != -10 {
 		t.Errorf("volume = %f, want -10", p.volume)
 	}

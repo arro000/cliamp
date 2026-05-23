@@ -218,9 +218,9 @@ func (e EmbyConfig) IsSet() bool {
 
 // Config holds user preferences loaded from the config file.
 type Config struct {
-	Volume            float64     // dB, range [VolumeMin, +6]
-	VolumeMin         float64     // dB floor, range [-90, 0]; default -50
-	VisVolumeLinked   bool        // when true, visualizer bar height follows volume; default true
+	Volume           float64     // dB, clamped at runtime to [VolumeMin, +6]
+	VolumeMin        float64     // dB floor, range [-90, 0]; default -50
+	VisVolumeLinked  bool        // when true, visualizer bar height follows volume; default true
 	EQ               [10]float64 // per-band gain in dB, range [-12, +12]
 	EQPreset         string      // preset name, or "" for custom
 	Repeat           string      // "off", "all", or "one"
@@ -260,9 +260,9 @@ type Config struct {
 // that require a specific rate (commonly 48 kHz) work out of the box.
 func defaultConfig() Config {
 	return Config{
-		VolumeMin:         -50,
-		VisVolumeLinked:   true,
-		Repeat:            "off",
+		VolumeMin:       -50,
+		VisVolumeLinked: true,
+		Repeat:          "off",
 		AutoPlay:        false,
 		Speed:           1.0,
 		SeekStepLarge:   30,
